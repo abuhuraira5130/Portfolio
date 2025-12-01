@@ -3,10 +3,13 @@
     "builder": "RAILPACK"
   },
   "deploy": {
-    "startCommand": "cd backend && gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 3 --log-file -",
+    "startCommand": "gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 3 --log-file -",
     "restartPolicy": {
       "onFailure": true,
       "maxRetries": 10
-    }
+    },
+    "watchPaths": [
+      "/backend/**"
+    ]
   }
 }
