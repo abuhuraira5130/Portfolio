@@ -82,65 +82,71 @@ class ContactSubmitView(APIView):
         data = serializer.validated_data
         msg = serializer.save()
         
-        # Send email to admin
+        # Admin Email (Plain text for reliability)
         admin_recipient = settings.CONTACT_RECIPIENT_EMAIL or settings.DEFAULT_FROM_EMAIL
-        subject_admin = f"New Contact Form Submission: {data['name']}"
-        body_admin = f"""
-New contact form submission:
-
-Name: {data['name']}
-Email: {data['email']}
-Message:
-{data['message']}
-
-Submitted at: {msg.created_at}
-"""
+        subject_admin = f"🚀 New Portfolio Inquiry: {data['name']}"
+        body_admin = f"New contact form submission:\n\nName: {data['name']}\nEmail: {data['email']}\n\nMessage:\n{data['message']}\n\nSubmitted at: {msg.created_at}"
         
-        # Send email to user
-        subject_user = "Thank you for contacting us!"
-        body_user = f"""
-Hi {data['name']},
-
-Thank you for reaching out! We have received your message and will get back to you shortly.
-
-Best regards,
-Portfolio Team
-"""
+        # Client Email (Polished HTML)
+        subject_user = "Thank you for reaching out!"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                .container {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; }}
+                .header {{ background: linear-gradient(to right, #6366f1, #a855f7); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }}
+                .content {{ padding: 30px; line-height: 1.6; color: #333; }}
+                .footer {{ text-align: center; padding: 20px; font-size: 12px; color: #777; }}
+                .button {{ display: inline-block; padding: 12px 24px; background-color: #6366f1; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; }}
+                .message-box {{ background-color: #f9fafb; border-left: 4px solid #6366f1; padding: 15px; margin: 20px 0; font-style: italic; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1 style="margin:0;">Thank You!</h1>
+                </div>
+                <div class="content">
+                    <p>Hi <strong>{data['name']}</strong>,</p>
+                    <p>Thanks for reaching out! I've received your message and will get back to you as soon as possible.</p>
+                    <div class="message-box">
+                        "{data['message']}"
+                    </div>
+                    <p>In the meantime, feel free to check out more of my work on my portfolio.</p>
+                    <a href="https://abu-huraira.vercel.app" class="button">Visit My Portfolio</a>
+                </div>
+                <div class="footer">
+                    <p>&copy; {msg.created_at.year} Abu Huraira. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
         
-        # Send both emails with proper error handling
         emails_sent = 0
-        
         try:
             # Send to admin
-            send_mail(
-                subject=subject_admin,
-                message=body_admin,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[admin_recipient],
-                fail_silently=False,
-            )
+            send_mail(subject_admin, body_admin, settings.DEFAULT_FROM_EMAIL, [admin_recipient], fail_silently=False)
             emails_sent += 1
         except Exception as e:
-            print(f"Failed to send admin email: {e}")
-        
+            print(f"Admin email fails: {e}")
+            
         try:
-            # Send to user
-            send_mail(
+            # Send to user (HTML)
+            email_user = EmailMessage(
                 subject=subject_user,
-                message=body_user,
+                body=html_content,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[data['email']],
-                fail_silently=False,
+                to=[data['email']],
             )
+            email_user.content_subtype = "html"
+            email_user.send(fail_silently=False)
             emails_sent += 1
         except Exception as e:
-            print(f"Failed to send user email: {e}")
-        
-        return Response({
-            'status': 'ok', 
-            'message': 'Form submitted successfully',
-            'emails_sent': emails_sent
-        }, status=status.HTTP_201_CREATED)
+            print(f"User email fails: {e}")
+            
+        return Response({'status': 'ok', 'emails_sent': emails_sent}, status=status.HTTP_201_CREATED)
 
 class ResumeView(APIView):
     permission_classes = [AllowAny]
